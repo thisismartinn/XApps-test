@@ -516,9 +516,11 @@ final class ReplyHooks {
                 try {
                     View list = content.findViewById(actionsId);
                     if (list instanceof ViewGroup) styleButtons((ViewGroup) list, rowView.getContext());
-                    // Only notifications that actually show action buttons get the gap.
+                    // Action buttons only need the gap in pop-ups (the handle); the reply box
+                    // needs it wherever it is shown, or it sits flush against the card's edge.
                     boolean buttons = list instanceof ViewGroup && hasVisibleButtons((ViewGroup) list);
-                    if (containerId != 0) keepClearOfHandle(content.findViewById(containerId), buttons && isPopUp(rowView));
+                    View container = containerId != 0 ? content.findViewById(containerId) : null;
+                    if (container != null) keepClearOfHandle(container, (buttons && isPopUp(rowView)) || hasReplyBox(container));
                 } catch (Throwable t) {
                     error("Styling action buttons failed", t);
                 }
@@ -550,6 +552,16 @@ final class ReplyHooks {
             container.setTag(TAG_GAP, null);
         }
         container.setLayoutParams(lp);
+    }
+
+    private static boolean hasReplyBox(View container) {
+        if (!(container instanceof ViewGroup)) return false;
+        ViewGroup group = (ViewGroup) container;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            if (child.getVisibility() != View.GONE && child.getClass().getSimpleName().equals("RemoteInputView")) return true;
+        }
+        return false;
     }
 
     private static boolean hasVisibleButtons(ViewGroup list) {
