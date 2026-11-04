@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ['v*']
+    branches: ['claude/youthful-galileo-m7zzud']  # temporary: lets the branch run before the workflow is on main
   workflow_dispatch:
 
 permissions:
