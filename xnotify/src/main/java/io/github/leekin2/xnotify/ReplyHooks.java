@@ -178,6 +178,7 @@ final class ReplyHooks {
                 frost(progress, context);
             }
             if (content != null && send != null) matchSendToBox(content, send, progress);
+            padReplyBox(view);
             return result;
         });
         info("Reply box: Xiaomi style for every notification");
@@ -516,11 +517,11 @@ final class ReplyHooks {
                 try {
                     View list = content.findViewById(actionsId);
                     if (list instanceof ViewGroup) styleButtons((ViewGroup) list, rowView.getContext());
-                    // Action buttons only need the gap in pop-ups (the handle); the reply box
-                    // needs it wherever it is shown, or it sits flush against the card's edge.
+                    // Action buttons only need the gap in pop-ups (the handle). The reply box gets
+                    // its own gap when it is inflated (see padReplyBox): it is created after this.
                     boolean buttons = list instanceof ViewGroup && hasVisibleButtons((ViewGroup) list);
                     View container = containerId != 0 ? content.findViewById(containerId) : null;
-                    if (container != null) keepClearOfHandle(container, (buttons && isPopUp(rowView)) || hasReplyBox(container));
+                    if (container != null) keepClearOfHandle(container, buttons && isPopUp(rowView));
                 } catch (Throwable t) {
                     error("Styling action buttons failed", t);
                 }
@@ -554,15 +555,22 @@ final class ReplyHooks {
         container.setLayoutParams(lp);
     }
 
-    private static boolean hasReplyBox(View container) {
-        if (!(container instanceof ViewGroup)) return false;
-        ViewGroup group = (ViewGroup) container;
-        for (int i = 0; i < group.getChildCount(); i++) {
-            View child = group.getChildAt(i);
-            if (child.getVisibility() != View.GONE && child.getClass().getSimpleName().equals("RemoteInputView")) return true;
-        }
-        return false;
+    /**
+     * The reply box is inflated when the user taps Reply, long after the row was styled, and sits
+     * flush against the card's bottom edge. Give it the same breathing room as the buttons.
+     */
+    private static void padReplyBox(View box) {
+        box.post(() -> {
+            if (!(box.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)) return;
+            if (box.getTag(TAG_REPLY_GAP) != null) return;
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) box.getLayoutParams();
+            lp.bottomMargin += Math.round(10 * box.getResources().getDisplayMetrics().density);
+            box.setTag(TAG_REPLY_GAP, Boolean.TRUE);
+            box.setLayoutParams(lp);
+        });
     }
+
+    private static final int TAG_REPLY_GAP = 0x7f0f_5ee2;
 
     private static boolean hasVisibleButtons(ViewGroup list) {
         if (list.getVisibility() == View.GONE) return false;
