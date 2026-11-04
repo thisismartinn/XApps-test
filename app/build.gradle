@@ -15,7 +15,7 @@ android {
         ndk { abiFilters 'arm64-v8a' }
     }
     signingConfigs {
-        // CI passes the release key through the environment; local builds without it fall back to debug.
+        // The release key comes from the environment (CI secrets); without it the APK stays unsigned. Never commit a keystore.
         release {
             def path = System.getenv('XAPPS_KEYSTORE')
             if (path) {
@@ -27,7 +27,7 @@ android {
         }
     }
     buildTypes {
-        release { signingConfig System.getenv('XAPPS_KEYSTORE') ? signingConfigs.release : signingConfigs.debug; minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
+        release { if (System.getenv('XAPPS_KEYSTORE')) signingConfig signingConfigs.release; minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     buildFeatures { compose true; buildConfig true }
