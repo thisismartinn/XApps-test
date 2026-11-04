@@ -516,7 +516,9 @@ final class ReplyHooks {
                 try {
                     View list = content.findViewById(actionsId);
                     if (list instanceof ViewGroup) styleButtons((ViewGroup) list, rowView.getContext());
-                    if (containerId != 0) keepClearOfHandle(content.findViewById(containerId), isPopUp(rowView));
+                    // Only notifications that actually show action buttons get the gap.
+                    boolean buttons = list instanceof ViewGroup && hasVisibleButtons((ViewGroup) list);
+                    if (containerId != 0) keepClearOfHandle(content.findViewById(containerId), buttons && isPopUp(rowView));
                 } catch (Throwable t) {
                     error("Styling action buttons failed", t);
                 }
@@ -548,6 +550,15 @@ final class ReplyHooks {
             container.setTag(TAG_GAP, null);
         }
         container.setLayoutParams(lp);
+    }
+
+    private static boolean hasVisibleButtons(ViewGroup list) {
+        if (list.getVisibility() == View.GONE) return false;
+        for (int i = 0; i < list.getChildCount(); i++) {
+            View child = list.getChildAt(i);
+            if (child instanceof Button && child.getVisibility() != View.GONE) return true;
+        }
+        return false;
     }
 
     /** True while the row is shown as a heads-up pop-up (the only place the handle is drawn). */
