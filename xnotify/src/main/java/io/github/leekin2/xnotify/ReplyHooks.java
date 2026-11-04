@@ -516,7 +516,7 @@ final class ReplyHooks {
                 try {
                     View list = content.findViewById(actionsId);
                     if (list instanceof ViewGroup) styleButtons((ViewGroup) list, rowView.getContext());
-                    if (containerId != 0) keepClearOfHandle(content.findViewById(containerId));
+                    if (containerId != 0) keepClearOfHandle(content.findViewById(containerId), isPopUp(rowView));
                 } catch (Throwable t) {
                     error("Styling action buttons failed", t);
                 }
@@ -532,15 +532,35 @@ final class ReplyHooks {
      * reply box (both live in actions_container). The framework resets this margin on every
      * re-apply, so add the gap to whatever it set.
      */
-    private static void keepClearOfHandle(View container) {
+    private static void keepClearOfHandle(View container, boolean popUp) {
         if (container == null || !(container.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)) return;
         ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) container.getLayoutParams();
         int gap = Math.round(10 * container.getResources().getDisplayMetrics().density);
         Object applied = container.getTag(TAG_GAP);
-        if (applied instanceof Integer && lp.bottomMargin == (Integer) applied) return;
-        lp.bottomMargin += gap;
-        container.setTag(TAG_GAP, lp.bottomMargin);
+        boolean has = applied instanceof Integer && lp.bottomMargin == (Integer) applied;
+        if (popUp == has) return;
+        if (popUp) {
+            lp.bottomMargin += gap;
+            container.setTag(TAG_GAP, lp.bottomMargin);
+        } else {
+            // The row was a pop-up earlier and now sits in the shade, which has no handle.
+            lp.bottomMargin = Math.max(0, lp.bottomMargin - gap);
+            container.setTag(TAG_GAP, null);
+        }
         container.setLayoutParams(lp);
+    }
+
+    /** True while the row is shown as a heads-up pop-up (the only place the handle is drawn). */
+    private static boolean isPopUp(View row) {
+        for (String name : new String[] {"isHeadsUp", "isPinned"}) {
+            try {
+                Method m = row.getClass().getMethod(name);
+                if (Boolean.TRUE.equals(m.invoke(row))) return true;
+            } catch (Throwable ignored) {
+                // Not on this System UI build; try the next, else treat as not a pop-up.
+            }
+        }
+        return false;
     }
 
     /** View tag key for the bottom margin XNotify last set (an id from the framework's range). */
