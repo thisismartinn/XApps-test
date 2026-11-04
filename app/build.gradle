@@ -14,8 +14,20 @@ android {
         versionName rootProject.ext.xappsVersionName
         ndk { abiFilters 'arm64-v8a' }
     }
+    signingConfigs {
+        // CI passes the release key through the environment; local builds without it fall back to debug.
+        release {
+            def path = System.getenv('XAPPS_KEYSTORE')
+            if (path) {
+                storeFile file(path)
+                storePassword System.getenv('XAPPS_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('XAPPS_KEY_ALIAS')
+                keyPassword System.getenv('XAPPS_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
-        release { signingConfig signingConfigs.debug; minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
+        release { signingConfig System.getenv('XAPPS_KEYSTORE') ? signingConfigs.release : signingConfigs.debug; minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     buildFeatures { compose true; buildConfig true }
