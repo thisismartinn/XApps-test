@@ -62,13 +62,6 @@ jobs:
             && zip -q "$GITHUB_WORKSPACE/XApps-$version.zip" xapps.apk)
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: XApps-${{ env.VERSION }}
-          path: |
-            XApps-*.apk
-            XApps-*.zip
-
       - name: Publish a draft GitHub release
         uses: softprops/action-gh-release@v2
         with:
