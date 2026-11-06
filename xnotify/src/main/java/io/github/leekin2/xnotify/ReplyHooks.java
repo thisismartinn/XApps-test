@@ -58,6 +58,7 @@ final class ReplyHooks {
 
     ReplyHooks(XposedInterface xposed) {
         this.xposed = xposed;
+        debug = xposed;
     }
 
     void install(ClassLoader loader) {
@@ -538,13 +539,14 @@ final class ReplyHooks {
      * thumbnail already and ends up visibly bottom-heavy, so the strip goes away for those only.
      */
     private static void trimCollapsedStrip(View content) {
+        stripLog(content, "styled, attached=" + content.isAttachedToWindow() + " h=" + content.getHeight());
         applyStripTrim(content);
         // Rows inside an expanded group are laid out later than the update that styled them, the
         // thumbnail can show up after that, and System UI can make the strip visible again. Watch
         // the row (it grows when the thumbnail appears) and its column (it grows when the strip
         // comes back), and look again after either changes size.
         View top = findStripRow(content);
-        if (top == null) return;
+        if (top == null) { stripLog(content, "no headerless row"); return; }
         watch(top, content);
         if (top.getParent() instanceof View) watch((View) top.getParent(), content);
     }
@@ -554,6 +556,7 @@ final class ReplyHooks {
         view.setTag(TAG_STRIP_WATCH, Boolean.TRUE);
         view.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             if (b - t == ob - ot) return;
+            stripLog(content, "size change on " + v.getClass().getSimpleName() + " " + (ob - ot) + "->" + (b - t));
             // Not in the middle of a layout pass.
             v.post(() -> applyStripTrim(content));
         });
@@ -568,6 +571,21 @@ final class ReplyHooks {
 
     private static final int TAG_STRIP_WATCH = 0x7f0f_5ee4;
 
+    /** DIAGNOSTIC: lets the static strip helpers write to the module log. */
+    private static volatile XposedInterface debug;
+
+    private static void stripLog(View content, String what) {
+        XposedInterface x = debug;
+        if (x == null) return;
+        String title = "?";
+        try {
+            View t = content.findViewById(Resources.getSystem().getIdentifier("title", "id", "android"));
+            if (t instanceof TextView) title = String.valueOf(((TextView) t).getText());
+        } catch (Throwable ignored) {
+        }
+        x.log(Log.INFO, TAG, "Strip [" + title + "@" + Integer.toHexString(System.identityHashCode(content)) + "] " + what);
+    }
+
     private static void applyStripTrim(View content) {
         Resources system = Resources.getSystem();
         int rowId = system.getIdentifier("notification_headerless_view_row", "id", "android");
@@ -579,6 +597,7 @@ final class ReplyHooks {
         boolean thumbnail = isShown(content, system.getIdentifier("conversation_image_message_container", "id", "android"))
                 || isShown(content, system.getIdentifier("right_icon", "id", "android"));
         ViewGroup column = (ViewGroup) top.getParent();
+        StringBuilder seen = new StringBuilder("check thumb=" + thumbnail + " column=" + column.getHeight() + " row=" + top.getHeight());
         for (int i = 0; i < column.getChildCount(); i++) {
             View child = column.getChildAt(i);
             if (child == top) continue;
@@ -587,6 +606,10 @@ final class ReplyHooks {
                 ViewGroup g = (ViewGroup) child;
                 for (int k = 0; k < g.getChildCount(); k++) if (g.getChildAt(k).getVisibility() == View.VISIBLE) empty = false;
             }
+            String name;
+            try { name = child.getId() == View.NO_ID ? "no-id" : child.getResources().getResourceEntryName(child.getId()); } catch (Throwable t) { name = "?"; }
+            seen.append(" | ").append(child.getClass().getSimpleName()).append(' ').append(name)
+                    .append(" vis=").append(child.getVisibility()).append(" h=").append(child.getHeight()).append(" empty=").append(empty);
             if (!empty) continue;
             if (thumbnail && child.getVisibility() == View.VISIBLE) {
                 child.setTag(TAG_STRIP, Boolean.TRUE);
@@ -597,6 +620,7 @@ final class ReplyHooks {
                 child.setVisibility(View.VISIBLE);
             }
         }
+        stripLog(content, seen.toString());
     }
 
     private static boolean isShown(View root, int id) {
