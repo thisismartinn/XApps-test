@@ -45,6 +45,9 @@ public final class Features {
     // Video and calls
     public static final String VIDEO_TOOLBOX = "video_toolbox";
     public static final String CALL_TOOLBOX = "call_toolbox";
+    public static final String FIND_DEVICE = "find_device_on";
+    public static final String VOLUME_SAFETY_OFF = "volume_safety_off";
+    public static final String NOTIFY_SHORT_VIBRATION = "notify_short_vibration";
     // Privacy and system
     public static final String FLAG_SECURE = "flag_secure_off";
     public static final String PERM_NO_WAIT = "perm_no_wait";
@@ -103,12 +106,13 @@ public final class Features {
     public static final String UPDATER_NO_AUTO_DIALOG = "updater_no_auto_dialog";
 
     public static final String[] ALL = {
+            FIND_DEVICE,
             BATTERY_RANKING, BATTERY_SCREEN_TIME, BATTERY_HEALTH, CHARGE_PROTECT, BATTERY_LIFE, POWER_EXTRAS,
             SMART_CHARGE, SUPER_WIRELESS, POWER_SAVE_REFRESH, POWER_SAVE_BRIGHTNESS, POWER_SAVE_BOOT,
             GAME_FPS, GAME_KEEP_ENABLED, GT_HDR, GT_SUPER_RES, GT_DYNAMIC_PERF, GT_TOUCH, GT_MI_TIME, GT_EXTRAS, GAME_MODES,
             GAME_TOAST_OFF, GAME_MACRO, GAME_NETWORK, JOYOSE_GPU, JOYOSE_CLOUD_OFF,
             NET_QUOTA_KEEP, NET_HOTSPOT_KEEP, NET_APP_CONTROLS, IMS_ICONS, SIM_MENUS,
-            VIDEO_TOOLBOX, CALL_TOOLBOX,
+            VIDEO_TOOLBOX, CALL_TOOLBOX, VOLUME_SAFETY_OFF, NOTIFY_SHORT_VIBRATION,
             FLAG_SECURE, PERM_NO_WAIT, SECOND_SPACE, WARNINGS, FBO, TOOLBOX, DATA_USAGE, APP_INFO, DOCK, CAR_SICKNESS, APPLOCK_SCRAMBLE, LOW_BATTERY_QUIET,
             SIM_SUCCESS_DIALOG_OFF, ROOT_CHECK_OFF, USB_INSTALL_CHECK_OFF, LOCKSCREEN_PIN_SCRAMBLE,
             APP_INFO_BUTTONS, APP_ICON_LAUNCH, MMS_ADS, MMS_FRAUD, MMS_OVERSEAS, MMS_OLD_DEVICE, MMS_COPY_CODE, HOME_PRESTART, HOME_REPORT,
@@ -129,18 +133,19 @@ public final class Features {
             APP_INFO_BUTTONS, APP_ICON_LAUNCH, MMS_ADS, MMS_FRAUD, MMS_OVERSEAS, MMS_OLD_DEVICE, MMS_COPY_CODE, HOME_PRESTART, HOME_REPORT,
             NET_QUOTA_KEEP, NET_HOTSPOT_KEEP, SMART_CHARGE, SUPER_WIRELESS, CAR_SICKNESS,
             SIM_SUCCESS_DIALOG_OFF, ROOT_CHECK_OFF, USB_INSTALL_CHECK_OFF, DARK_MODE_ALL_APPS,
-            STORE_FORCE_CHOOSER, STORE_GETAPPS_MINI, THEME_THIRD_PARTY, THEME_FIX_RESET, FLAG_SECURE,
+            STORE_FORCE_CHOOSER, STORE_GETAPPS_MINI, THEME_THIRD_PARTY, THEME_FIX_RESET, FLAG_SECURE, VOLUME_SAFETY_OFF, NOTIFY_SHORT_VIBRATION,
             CLIPBOARD_WHITELIST, APPLIST_UPLOAD_OFF,
             POWER_SAVE_REFRESH, POWER_SAVE_BRIGHTNESS, POWER_SAVE_BOOT, GAME_KEEP_ENABLED, NET_APP_CONTROLS, IMS_ICONS, SIM_MENUS,
             CP_DOWNGRADE, CP_VERIFY, CP_ARSC, CP_DIGEST, CP_EXACT, CP_PREVIOUS, CP_HIDDEN, CP_SHARED, CP_AGENT, CP_BLOCK, CP_PERSISTENT, CP_SYSTEM_UI_UID);
 
     /**
-     * A brand-new install starts with every switch off; the user turns on what they want.
+     * A brand-new install starts with every switch off except the Find Device fix, which stays on
+     * until the user turns it off; the user turns on the rest.
      * Existing installs keep their choices: {@link #legacyDefault} is frozen into their stored
      * settings once (see MainActivity), so this change never turns anything off for them.
      */
     public static boolean defaultValue(String key) {
-        return false;
+        return FIND_DEVICE.equals(key);
     }
 
     /**
@@ -162,7 +167,7 @@ public final class Features {
     /** Old installs keep their header row until the new independent switch is explicitly saved. */
     public static boolean read(SharedPreferences p, String key) {
         if (p == null) return defaultValue(key);
-        boolean fallback = APP_INFO_BUTTONS.equals(key) && p.getBoolean(APP_INFO, false);
+        boolean fallback = FIND_DEVICE.equals(key) || (APP_INFO_BUTTONS.equals(key) && p.getBoolean(APP_INFO, false));
         return p.getBoolean(key, fallback);
     }
 
