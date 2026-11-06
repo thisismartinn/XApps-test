@@ -539,13 +539,24 @@ final class ReplyHooks {
      */
     private static void trimCollapsedStrip(View content) {
         applyStripTrim(content);
-        // Rows inside an expanded group are laid out later than the update that styled them, and
-        // the strip can come back, so look again whenever the row is laid out.
+        // Rows inside an expanded group are laid out later than the update that styled them, the
+        // thumbnail can show up after that, and System UI can make the strip visible again. Watch
+        // the row (it grows when the thumbnail appears) and its column (it grows when the strip
+        // comes back), and look again after either changes size.
         View top = findStripRow(content);
-        if (top != null && top.getTag(TAG_STRIP_WATCH) == null) {
-            top.setTag(TAG_STRIP_WATCH, Boolean.TRUE);
-            top.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> applyStripTrim(content));
-        }
+        if (top == null) return;
+        watch(top, content);
+        if (top.getParent() instanceof View) watch((View) top.getParent(), content);
+    }
+
+    private static void watch(View view, View content) {
+        if (view.getTag(TAG_STRIP_WATCH) != null) return;
+        view.setTag(TAG_STRIP_WATCH, Boolean.TRUE);
+        view.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (b - t == ob - ot) return;
+            // Not in the middle of a layout pass.
+            v.post(() -> applyStripTrim(content));
+        });
     }
 
     private static View findStripRow(View content) {
