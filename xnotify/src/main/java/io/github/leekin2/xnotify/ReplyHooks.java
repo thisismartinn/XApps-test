@@ -559,6 +559,27 @@ final class ReplyHooks {
         } catch (Throwable t) {
             error("Action button measure hook unavailable", t);
         }
+
+        // The same goes for the collapsed card's thumbnail: it can be filled in after
+        // onContentUpdated, when the trim already decided there was none. Check again right before
+        // the card is measured, so its height is worked out with the strip already gone.
+        try {
+            Class<?> contentView = Class.forName(SB + "notification.row.NotificationContentView", false, loader);
+            Field contracted = contentView.getDeclaredField("mContractedChild");
+            contracted.setAccessible(true);
+            Method measure = contentView.getDeclaredMethod("onMeasure", int.class, int.class);
+            hook(measure).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept(chain -> {
+                try {
+                    Object child = contracted.get(chain.getThisObject());
+                    if (child instanceof View) applyStripTrim((View) child);
+                } catch (Throwable t) {
+                    error("Collapsed strip check on measure failed", t);
+                }
+                return chain.proceed();
+            });
+        } catch (Throwable t) {
+            error("Collapsed strip measure hook unavailable", t);
+        }
         info("Action buttons: Xiaomi style for every notification");
     }
 
