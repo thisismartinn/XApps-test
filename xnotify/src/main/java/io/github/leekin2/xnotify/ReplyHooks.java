@@ -529,7 +529,58 @@ final class ReplyHooks {
             });
             return result;
         });
+
+        // HyperOS 4.0.7 fills the expanded view's buttons in after onContentUpdated, so the pass
+        // above can find an empty or stale row. Style the row again when it is measured with a new
+        // set of buttons; the button list is Android's own class in every Android template.
+        try {
+            Method wrapperOf = row.getDeclaredMethod("getNotificationViewWrapper");
+            wrapperOf.setAccessible(true);
+            Class<?> listClass = Class.forName("com.android.internal.widget.NotificationActionListLayout");
+            Method measure = listClass.getDeclaredMethod("onMeasure", int.class, int.class);
+            hook(measure).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept(chain -> {
+                try {
+                    ViewGroup list = (ViewGroup) chain.getThisObject();
+                    String signature = buttonSignature(list);
+                    if (signature != null && !signature.equals(list.getTag(TAG_BUTTONS))) {
+                        View rowView = ancestor(list, row);
+                        Object w = rowView == null ? null : wrapperOf.invoke(rowView);
+                        if (w != null && Boolean.TRUE.equals(isNative.invoke(null, w))) {
+                            list.setTag(TAG_BUTTONS, signature);
+                            styleButtons(list, rowView.getContext(),
+                                    View.MeasureSpec.getSize((int) chain.getArg(0)));
+                        }
+                    }
+                } catch (Throwable t) {
+                    error("Styling action buttons on measure failed", t);
+                }
+                return chain.proceed();
+            });
+        } catch (Throwable t) {
+            error("Action button measure hook unavailable", t);
+        }
         info("Action buttons: Xiaomi style for every notification");
+    }
+
+    /** View tag key: the set of buttons XNotify last styled in a row (an id from the framework's range). */
+    private static final int TAG_BUTTONS = 0x7f0f_5ee5;
+
+    /** The visible buttons' identities and labels, or null when the row shows none. */
+    private static String buttonSignature(ViewGroup list) {
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < list.getChildCount(); i++) {
+            View child = list.getChildAt(i);
+            if (!(child instanceof Button) || child.getVisibility() == View.GONE) continue;
+            s.append(System.identityHashCode(child)).append(':').append(((Button) child).getText()).append('|');
+        }
+        return s.length() == 0 ? null : s.toString();
+    }
+
+    private static View ancestor(View view, Class<?> type) {
+        for (Object p = view.getParent(); p instanceof View; p = ((View) p).getParent()) {
+            if (type.isInstance(p)) return (View) p;
+        }
+        return null;
     }
 
     /**
@@ -664,6 +715,11 @@ final class ReplyHooks {
 
     /** Xiaomi's notification_action look: grey 20dp rounded chip, its text colour and size. */
     private static void styleButtons(ViewGroup list, Context systemUi) {
+        styleButtons(list, systemUi, 0);
+    }
+
+    /** @param measuredWidth the row's width when it has not been laid out yet (0 if unknown). */
+    private static void styleButtons(ViewGroup list, Context systemUi, int measuredWidth) {
         Resources res = systemUi.getResources();
         int bg = res.getIdentifier("notification_action_bg_color", "color", SYSTEMUI);
         int text = res.getIdentifier("notification_action_text_color", "color", SYSTEMUI);
@@ -705,7 +761,8 @@ final class ReplyHooks {
         // column, Android drops its start indent and the row jumps to the card edge (WhatsApp's
         // three buttons); tighten the chips step by step until it fits again.
         int[][] steps = {{14, 10}, {12, 8}, {10, 8}, {9, 6}, {8, 6}, {7, 5}, {6, 4}};
-        int available = list.getWidth() - list.getPaddingLeft() - list.getPaddingRight() - collapsibleIndent(list);
+        int width = list.getWidth() > 0 ? list.getWidth() : measuredWidth;
+        int available = width - list.getPaddingLeft() - list.getPaddingRight() - collapsibleIndent(list);
         int horizontal = Math.round(14 * dp);
         int gap = Math.round(10 * dp);
         for (int[] step : steps) {
