@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.0.6
+
+- XSecurity: optional Video toolbox music recognition shortcut for compatible Mi Music builds.
+- XSecurity: optional display refresh rate lock based on HyperCeiler LockMaxFps.
+- XSecurity: optional Game Center promotion and booster offer removal.
+- XSecurity: theatre mode, Dolby, MEMC, super resolution, contour enhancement and video temperature control have separate switches. Existing video settings still apply until individually changed.
+- XSecurity: screen-off video sound is controlled by its own switch. Game Turbo extras no longer override its device flag.
+- XNotify: the notification receive screen finds the device manager on MiLink 18.2.4 as well as older builds.
+- XGoogle: the scope status explains why Google Play services and Google Services Framework are optional Timeline scopes.
+- XSecurity: optional one-time approval for Xiaomi app-to-app launch prompts, off by default. File-sharing and other permission prompts are excluded.
+- New XSecurity section: Privacy, four switches, all off by default: stop carrier data collection, stop China Telecom device registration, stop MiSight uploads, and give the ad service no app usage data. Each needs its app approved in the LSPosed scope. Idea from Hyper Privacy Guard.
+- XGoogle: the Talk and Create entries in Google Lens are back on newer Google app versions (17.70 to 17.73). Fix from Coogle 1.3.6-1.3.9 by zopulus.
+- New XSecurity switch (experimental, off by default): Call noise reduction. Shows the Noise reduction button in the call toolbox; it only has an effect on devices whose audio hardware supports it.
+- New XSecurity fix, on by default: floating windows work while Google's motion cues are on. Their bar (move, close, menu) ignored every touch because HyperOS counted the motion cues overlay as a full-screen touch-blocking area. Analysis and fix design by xrh0905.
+
+## 1.0.5
+
+- New XSecurity switch: Video sound with screen off. Shows this video toolbox shortcut on Global ROMs and on devices where Xiaomi hid it, when the system supports it. Off by default.
+- Extend Unlock: the lock screen now takes the trusted state straight from Android instead of working it out itself. Before, a short moment after the lock screen appeared could count as unlocked.
+- Clock seconds: the time no longer shows a wrong minute for a moment when the minute changes, a clock that also shows the date gets the seconds after the time, and the clock is not refreshed while the screen is off.
+- Google map: when the Google layer can't be added, Baidu's map comes back with its logo and the chosen map type instead of an empty map.
+- Moving from the old XGoogle, XSecurity or XNotify apps: an old app that is kept because its settings could not be copied is now switched off in LSPosed, so it doesn't run next to XApps.
+- Removing the module now also resets the power key double press when Google Wallet was chosen from the power key screen.
+- A clearer message when the Extend Unlock page can't open.
+
+## 1.0.4
+
+- New XSecurity switch: seconds on the status bar clock (HH:MM:SS). Off by default.
+- New XSecurity switch: Extend Unlock (Smart Lock). Brings back Google's feature that keeps the phone unlocked with a device or place you trust. Off by default. Based on HyperTrust by StevenWin818.
+- Moving from the old XGoogle, XSecurity or XNotify apps: an old app is no longer uninstalled when its settings could not be copied, so they are not lost. XApps tells you to remove it by hand.
+- Removing the XApps module now puts the double press of the power key back if it opened Google Wallet.
+- Google Wallet is no longer added to the LSPosed scope automatically. You are asked when you turn its switch on. If it is already ticked and you don't use it, untick it in LSPosed.
+- Find Device: refreshing one device no longer delays refreshing another, and a failed refresh can be retried right away.
+- Find Device: Route now opens Google Maps directly. Without Google Maps, it asks which map app to open.
+- New XSecurity switch (experimental): Google map. The map inside Find Device shows Google's map, without Baidu's labels and logo. Off by default.
+
 ## 1.0.3
 
 - Find Device fix: now really on by default. In 1.0.2 it stayed off until you turned it on in XSecurity. If you turned it off in 1.0.2, turn it off once more.

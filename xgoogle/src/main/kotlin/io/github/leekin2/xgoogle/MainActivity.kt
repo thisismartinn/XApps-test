@@ -98,13 +98,15 @@ class MainActivity : ComponentActivity() {
     /**
      * LSPosed drops an app from the scope when it is reinstalled (Google Wallet, the Google app),
      * and XGoogle then silently stops working there. Ask LSPosed once per installation to add the
-     * installed apps XGoogle works in back; the camera only while its Lens button is on.
+     * installed apps XGoogle works in back; the camera only while its Lens button is on, Wallet
+     * only while its switch is on.
      */
     private fun requestMissingScope(service: XposedService) {
         runCatching {
             val scope = service.scope.toSet()
             val declared = javaClass.classLoader!!.getResourceAsStream("META-INF/xposed/scope.list")
                 .bufferedReader().readLines().map(String::trim)
+                .plus(if (state.features[FeaturePolicy.WALLET] == true) listOf(WalletPowerPolicy.WALLET_PACKAGE) else emptyList())
             val missing = declared.filter { it.isNotEmpty() && it != "system" && it !in scope }
                 .filter { it != "com.android.camera" || state.features[FeaturePolicy.CAMERA_LENS] == true }
                 .mapNotNull { name ->
@@ -342,15 +344,16 @@ class MainActivity : ComponentActivity() {
      */
     private fun refreshScopes() {
         val scope = runCatching { SettingsConnection.currentScope() }.getOrNull()
-        if (scope == null || !state.connected) { state = state.copy(missingScopes = emptyList()); return }
-        val missing = state.features.filterValues { it }.keys.flatMap(FeatureScopes::required).distinct()
+        if (scope == null || !state.connected) { state = state.copy(missingScopes = emptyList(), missingTimelineScopes = false); return }
+        val missingPackages = state.features.filterValues { it }.keys.flatMap(FeatureScopes::required).distinct()
             .filter { it !in scope }
-            .mapNotNull { name ->
+        val missing = missingPackages.mapNotNull { name ->
                 if (name == FeatureScopes.SYSTEM) name
                 else runCatching { packageManager.getApplicationInfo(name, 0) }.getOrNull()
                     ?.let { packageManager.getApplicationLabel(it).toString() }
             }
-        state = state.copy(missingScopes = missing)
+        state = state.copy(missingScopes = missing, missingTimelineScopes =
+            missingPackages.any { it == "com.google.android.gms" || it == "com.google.android.gsf" })
     }
 
     /**
