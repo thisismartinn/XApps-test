@@ -69,6 +69,7 @@ public final class XNotifyModule extends XposedModule {
     @Override
     public void onPackageReady(XposedModuleInterface.PackageReadyParam param) {
         if (SYSTEMUI.equals(param.getPackageName())) {
+            if (!systemUiReady(param)) return;
             if (setting(SettingsActivity.FORWARD)) {
                 try { hookHeadsUp(param.getClassLoader()); } catch (Throwable t) { error("Pop-up hook unavailable", t); }
             }
@@ -86,6 +87,40 @@ public final class XNotifyModule extends XposedModule {
         try { hookAppPicker(loader); } catch (Throwable t) { error("App picker hook unavailable", t); }
         try { hookCatalogRequest(loader); } catch (Throwable t) { error("App list request hook unavailable", t); }
         if ("com.milink.crossdeviceservice".equals(android.app.Application.getProcessName())) sendCatalogSoon(loader);
+    }
+
+    /** System UI's hooks are installed once per process, on the first load that can see its classes. */
+    private static final java.util.concurrent.atomic.AtomicBoolean systemUiHooked = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /**
+     * HyperOS 4.0.7 announces System UI more than once in the same process, and not every time with
+     * a class loader that holds System UI's own code. Hooking on such a pass installs half the hooks
+     * against nothing, and which pass comes first varies from boot to boot. Log every pass, skip the
+     * ones that cannot see System UI's notification classes, and hook only once.
+     */
+    private boolean systemUiReady(XposedModuleInterface.PackageReadyParam param) {
+        ClassLoader loader = param.getClassLoader();
+        ApplicationInfo app = param.getApplicationInfo();
+        String where = "first=" + param.isFirstPackage() + " apk=" + (app == null ? "?" : app.sourceDir) + " loader=" + loader;
+        String[] needed = {
+                "com.android.systemui.statusbar.notification.row.ExpandableNotificationRow",
+                "com.android.systemui.statusbar.notification.row.wrapper.NotificationViewWrapper",
+                "com.android.systemui.statusbar.notification.policy.RemoteInputViewInjectorImp",
+                "com.android.systemui.statusbar.policy.RemoteInputView"};
+        for (String name : needed) {
+            try {
+                Class.forName(name, false, loader);
+            } catch (Throwable t) {
+                info("System UI pass skipped, " + name.substring(name.lastIndexOf('.') + 1) + " not visible: " + where);
+                return false;
+            }
+        }
+        if (!systemUiHooked.compareAndSet(false, true)) {
+            info("System UI pass skipped, already hooked: " + where);
+            return false;
+        }
+        info("System UI pass hooked: " + where);
+        return true;
     }
 
     /** Both modules hooking the reply box would apply every change twice. */
