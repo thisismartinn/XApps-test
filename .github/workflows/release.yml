@@ -64,6 +64,9 @@ jobs:
       - name: Publish a draft GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          # A fine-grained token (Contents: read and write on this repo) in the RELEASE_TOKEN
+          # secret is used when present; GitHub's own token is refused here with a 403.
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
           draft: true
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', env.VERSION) }}
           target_commitish: ${{ github.sha }}
