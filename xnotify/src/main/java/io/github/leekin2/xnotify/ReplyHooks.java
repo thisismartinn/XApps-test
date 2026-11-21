@@ -808,6 +808,19 @@ final class ReplyHooks {
                 button.setLayoutParams(params);
             }
         }
+        // Some rows only stretch their button while laying it out; look again once they have.
+        if (edge == 0 && !buttons.isEmpty()) {
+            Button first = buttons.get(0);
+            int inset = Math.round(12 * dp);
+            list.post(() -> {
+                ViewGroup.LayoutParams lp = first.getLayoutParams();
+                if (!(lp instanceof LinearLayout.LayoutParams) || first.getParent() != list) return;
+                LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) lp;
+                if (params.getMarginStart() != 0 || !fullWidth(list, java.util.Collections.singletonList(first))) return;
+                params.setMarginStart(inset);
+                first.setLayoutParams(params);
+            });
+        }
     }
 
     /** Emphasized rows, or rows whose buttons stretch to share the width. */
@@ -817,9 +830,15 @@ final class ReplyHooks {
         } catch (Throwable ignored) {
             // Not on this Android version; fall back to the buttons' own layout.
         }
+        int inner = list.getWidth() - list.getPaddingLeft() - list.getPaddingRight();
         for (Button button : buttons) {
             ViewGroup.LayoutParams lp = button.getLayoutParams();
+            if (lp == null) continue;
+            // Stretched by weight, set to fill the row (Maps' single "Exit navigation"), or, once
+            // laid out, as wide as the row.
             if (lp instanceof LinearLayout.LayoutParams && ((LinearLayout.LayoutParams) lp).weight > 0) return true;
+            if (lp.width == ViewGroup.LayoutParams.MATCH_PARENT) return true;
+            if (inner > 0 && button.getWidth() >= inner - 2) return true;
         }
         return false;
     }
