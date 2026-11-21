@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ['v*']
+    branches: ['claude/youthful-galileo-m7zzud']  # temporary: one release build from this branch
   workflow_dispatch:
 
 permissions:
