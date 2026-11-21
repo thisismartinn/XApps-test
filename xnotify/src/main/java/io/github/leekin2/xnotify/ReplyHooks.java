@@ -794,17 +794,34 @@ final class ReplyHooks {
         }
 
         int vertical = pad != 0 ? res.getDimensionPixelSize(pad) : Math.round(7 * dp);
+        // Full-width rows (Maps' "Exit navigation", progress and call styles) have no start indent;
+        // Android leaves a gap only at the end, so give the first button the same gap at the start.
+        int edge = fullWidth(list, buttons) ? Math.round(12 * dp) : 0;
         for (int i = 0; i < buttons.size(); i++) {
             Button button = buttons.get(i);
             button.setPadding(horizontal, vertical, horizontal, vertical);
             ViewGroup.LayoutParams lp = button.getLayoutParams();
             if (lp instanceof LinearLayout.LayoutParams) {
                 LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) lp;
-                params.setMarginStart(i == 0 ? 0 : gap);
+                params.setMarginStart(i == 0 ? edge : gap);
                 params.setMarginEnd(0);
                 button.setLayoutParams(params);
             }
         }
+    }
+
+    /** Emphasized rows, or rows whose buttons stretch to share the width. */
+    private static boolean fullWidth(ViewGroup list, java.util.List<Button> buttons) {
+        try {
+            if (field(list.getClass(), "mEmphasizedMode").getBoolean(list)) return true;
+        } catch (Throwable ignored) {
+            // Not on this Android version; fall back to the buttons' own layout.
+        }
+        for (Button button : buttons) {
+            ViewGroup.LayoutParams lp = button.getLayoutParams();
+            if (lp instanceof LinearLayout.LayoutParams && ((LinearLayout.LayoutParams) lp).weight > 0) return true;
+        }
+        return false;
     }
 
     /** The start indent NotificationActionListLayout drops when the row does not fit. */
